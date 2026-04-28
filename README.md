@@ -4,6 +4,19 @@
 
 *Manage complex projects with a team of AI agents, smoothly and efficiently.*
 
+> **Custom adaptation — `devLeopar/apm-e2e`.** This fork extends upstream [agentic-project-management](https://github.com/sdi2200262/agentic-project-management) with two additions for projects that need behavioral verification:
+>
+> 1. **Inline Worker E2E execution.** Workers run E2E scenarios (Playwright, Maestro, Detox, etc.) directly in their own context — no separate validator subagent, no dispatch toggle. The same agent that writes the feature also runs the behavioral checks against it.
+> 2. **E2E Test Corpus + Manager regression suite.** Passing scenarios are persisted as runner-native test code into the project tree (e.g. `.maestro/`, `e2e/playwright/`) with a `# APM source: Task N.M` traceability header. After each E2E-passing Task, the Manager runs the full corpus during Task Review (before marking Done) and triages regression failures into four branches: *consumer broke producer's feature*, *producer's test is stale*, *consumer adapts to existing contract*, or *ambiguous — User decides*. Cadence is configurable in the Spec (`per-task`, `per-stage`, or `manual-only`).
+>
+> The Planner asks about E2E policy, corpus location, and regression cadence during Round 2 of Context Gathering; the Spec records them; the Manager orchestrates persistence and regression at runtime.
+>
+> **Install:**
+> ```bash
+> apm custom -r devLeopar/apm-e2e --tag v1.0.1-e2e-2
+> ```
+> Both layers are opt-in — projects that don't need E2E (internal libraries, throwaway prototypes) declare `## E2E Testing Policy: never` and the entire layer is inert.
+
 ## What is APM?
 
 APM is an open-source framework for managing ambitious software projects with AI assistants. Instead of working in a single, increasingly chaotic chat, APM structures your work into a coordinated system where different AI agents handle planning, coordination, and execution as a team.

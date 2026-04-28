@@ -57,7 +57,7 @@ Perform the following actions:
    - Set `status` per §2.2 Outcome Standards.
    - Set `important_findings` and `compatibility_issues` per §2.1 Flag Assessment Standards.
    - Set `stage`, `task`, `title`, and `agent` from the Task Prompt.
-3. Complete markdown body sections per §4.1 Task Log Format. Always include: Summary, Details, Output, Validation, Issues. Include conditional sections (Compatibility Concerns, Important Findings) only when their corresponding flag is `true`.
+3. Complete markdown body sections per §4.1 Task Log Format. Always include: Summary, Details, Output, Validation, Issues. Include conditional sections (Compatibility Concerns, Important Findings) only when their corresponding flag is `true`. Include the E2E Validation section when the Task Prompt contained an E2E Validation section and the Worker executed the scenarios - embed the captured `e2e_result` verbatim. Include a Test Persistence section when the Task Prompt's E2E Validation included a `### Persistence` block and the Worker wrote test code into the corpus per `{GUIDE_PATH:task-execution}` §3.4 - list each persisted file path with the scenarios it covers. Include a Post-Done Correction section when post-Done User corrections were applied per `{GUIDE_PATH:task-execution}` §2.4.
 4. Write the Task Log to `log_path`.
 
 ### 3.2 Task Report Delivery
@@ -134,6 +134,21 @@ compatibility_issues: true | false
 ## Important Findings
 [Only include if important_findings: true]
 [Project-relevant discoveries that Manager must know]
+
+## E2E Validation
+[Only include when the Task Prompt contained an E2E Validation section]
+[Embed the e2e_result captured during scenario execution, verbatim as YAML in a fenced block]
+[Optionally note re-run iterations after application-side fixes or User-approved skip decisions in prose]
+
+## Test Persistence
+[Only include when the Task Prompt's E2E Validation contained a Persistence sub-block and tests were written]
+[List each persisted test file with the scenarios it covers, e.g.:
+- `e2e/playwright/auth-signin.spec.ts` — covers "Happy path sign-in", "Invalid credentials error"
+- `.maestro/nav-tabs.yaml` — covers "Tap each tab and verify placeholder"]
+
+## Post-Done Correction
+[Only include when post-Done User corrections were applied per task-execution §2.4]
+[Describe what changed, why, and whether re-validation was performed]
 ```
 
 ### 4.2 Task Report Format

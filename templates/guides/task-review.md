@@ -26,7 +26,9 @@ Extract the information needed for the next review decision.
 - `important_findings: true` - Worker observed something potentially beyond Task scope. Assess whether it affects planning documents or other Tasks. When findings indicate that validation criteria from the Task Prompt were not fully exercised, this warrants investigation before marking Done. Important findings may also include User corrections noted as potential Rules entries - assess whether they warrant a Rules addition per §2.3 Planning Document Modification Standards.
 - `compatibility_issues: true` - Worker observed conflicts with existing systems. Assess whether it indicates Plan, Spec, or Rules issues.
 
-**Content review:** Beyond flags and status, review the log body sections (Summary, Details, Output, Validation, Issues) to understand what happened and inform the review outcome. When findings contradict content in the Spec, Plan, or Rules - factual inaccuracies, incorrect assumptions, outdated descriptions - treat the affected document as needing correction per §3.4 Planning Document Modification regardless of whether the Worker handled the discrepancy.
+**Content review:** Beyond flags and status, review the log body sections (Summary, Details, Output, Validation, Issues, E2E Validation, and Test Persistence when present) to understand what happened and inform the review outcome. When findings contradict content in the Spec, Plan, or Rules - factual inaccuracies, incorrect assumptions, outdated descriptions - treat the affected document as needing correction per §3.4 Planning Document Modification regardless of whether the Worker handled the discrepancy. The Test Persistence section lists files that entered the corpus during this Task; reading it surfaces what regression will exercise per §2.10 Regression Run Standards.
+
+**E2E result interpretation:** When the Task Log contains an E2E Validation section with structured `e2e_result`, interpret it alongside the standard Task Log content. A `pass` verdict with the Worker's status `Success` proceeds normally. A `fail` verdict with `Success` is a hallucination signal - investigate before accepting. A `blocked` verdict (missing MCP, unreachable environment) triggers MCP re-guidance per `{SKILL_PATH:apm-mcp-setup}` §4 Runtime Missing-MCP Handling before re-dispatch. A `fail` verdict with `Partial` or `Failed` status requires a follow-up Task Prompt refined from the `failure_summary` and failing scenario details - include specific acceptance conditions that failed so the Worker has a concrete target. Read scenario artifacts (screenshots, traces) when `failure_reason` is ambiguous and root cause needs verification.
 
 ### 2.2 Review Outcome Standards
 
@@ -96,13 +98,30 @@ After all Tasks in a Stage are Done, assess whether the Stage's deliverables req
 
 **When to verify:** Stages where the User confirmed verification during the understanding summary approval, where Task Reviews surfaced edge cases or compatibility concerns, where follow-up prompts were required during the Stage, where Workers reported difficulties or important findings, where the Planner flagged complexity in Plan notes, or where accumulated working notes suggest deliverables should be checked as a whole. Simple Stages with clean Task Reviews and no flags can proceed directly to the summary.
 
-**How to verify:** Re-run the most important validation checks Workers already performed, exercise edge cases that individual Task validation may not have covered, run holistic end-to-end checks across the Stage's deliverables, and read source files, artifacts, or data to confirm the codebase is in the expected state. Verification should match the validation patterns established in the project - the same kinds of checks at the integration level. For context-intensive checks, dispatch a verification subagent and verify its findings against the referenced files before acting on them.
+**How to verify:** Re-run the most important validation checks Workers already performed, exercise edge cases that individual Task validation may not have covered, run holistic end-to-end checks across the Stage's deliverables, and read source files, artifacts, or data to confirm the codebase is in the expected state. Verification should match the validation patterns established in the project - the same kinds of checks at the integration level. For context-intensive checks, dispatch a verification subagent and verify its findings against the referenced files before acting on them. When the project's E2E Testing Policy is not `never` and the Stage's deliverables combine into cross-Task user flows, consider assembling a Stage-level E2E Test Brief exercising those flows and executing it inline per `{SKILL_PATH:apm-e2e-validation}` §5 Execution from your coordination context. When the Spec also declares an `## E2E Test Corpus` with `per-stage` cadence, run the corpus regression as part of Stage Verification per §2.10 Regression Run Standards. Stage-level E2E is discretionary - per-Task validation often covers behavior sufficiently.
 
 **When verification reveals issues:** Determine the appropriate response based on scope. For contained issues you can resolve directly, fix them. For issues requiring focused investigation, dispatch a subagent. For issues requiring Worker-level execution, create a new Task through Plan modification per §2.3 Planning Document Modification Standards. For issues whose scope or direction is unclear, present findings to the User with your assessment and proposed options. When verification requires User judgment or action, present findings and pause.
 
 ### 2.9 Non-APM Agent Reports
 
 When a report arrives from an agent not listed in Worker tracking, it is a non-APM agent that joined the session independently. These reports do not follow the standard processing flow - there is no Task Log, no Worker tracking entry, and no dispatch state to update. Assess the report on its own terms: what the agent did, whether it affects planning documents or current dispatch. Add a working note to the Tracker recording the agent's identity and contribution. Inform the User of the findings. If follow-up work is needed, assign it per `{GUIDE_PATH:task-assignment}` §2.7 Non-APM Agent Dispatch.
+
+### 2.10 Regression Run Standards
+
+When the Spec declares an `## E2E Test Corpus`, run the corpus regression to verify the just-completed Task did not break previously-persisted scenarios. Cadence, execution, and triage standards follow `{SKILL_PATH:apm-e2e-validation}` §7 Regression Run.
+
+**Run timing.** Per the Spec's cadence:
+- *`per-task`:* Run during Task Review at §3.3 step 3, after determining the Worker outcome and before marking the Task Done in the Tracker. The Task remains Active when regression triggers a follow-up - "Done" reflects both Worker validation and regression clearing.
+- *`per-stage`:* Run as part of Stage Verification per §2.8 - combine with any Stage-level E2E Brief.
+- *`manual-only`:* Run only on explicit User request.
+
+**Scope of trigger.** Regression runs only when the just-completed Task itself produced a passing E2E with persistence. Tasks with no E2E section, with `e2e_result.status` other than `pass`, or without a Persistence sub-block do not trigger regression - they cannot have introduced corpus drift in this cycle.
+
+**Empty corpus.** When the corpus has no test files (first E2E-passing Task), regression is a no-op - record in Working Notes and continue.
+
+**Failure triage.** When `regression_result.status: fail`, identify each failing test's producer Task from the file's `# APM source:` header per `{SKILL_PATH:apm-e2e-validation}` §6.4. Apply the four triage branches per `{SKILL_PATH:apm-e2e-validation}` §7.4 - consumer broke producer (follow-up to current Worker), producer test stale (follow-up to producer Worker or Manager updates inline), consumer adapts (follow-up to current Worker with adaptation guidance), or ambiguous (User decides). Triage uses the same authority threshold as §2.3 Planning Document Modification Standards. Record the triage decision in `triage_notes` and as a Working Note per §2.7. When a follow-up loops back through Task Execution, the corrected Task re-runs its own E2E and re-persists, then regression re-runs - bounded by the standard correction loop budget per `{GUIDE_PATH:task-execution}` §3.5.
+
+**Blocked execution.** When the Manager cannot run regression (missing runner, target unreachable), record as `regression_result.status: blocked`, communicate to the User with setup guidance per `{SKILL_PATH:apm-mcp-setup}` §4 Runtime Missing-MCP Handling, and continue with the Task as Done while flagging that regression coverage is paused until resolved.
 
 ---
 
@@ -128,7 +147,7 @@ Execute after report processing. Present your assessment of the Task Log visibly
 
 Perform the following actions:
 1. Read the Task Log at the path referenced in the Task Report.
-2. Interpret content per §2.1 Task Log Review Standards: status, flags, body sections. Assess consistency between status/flags and body content.
+2. Interpret content per §2.1 Task Log Review Standards: status, flags, body sections including E2E Validation when present. Assess consistency between status/flags and body content.
 3. Continue to the review outcome.
 
 ### 3.3 Review Outcome
@@ -139,10 +158,11 @@ Perform the following actions:
 1. Review findings from the Task Log per §2.2 Review Outcome Standards. Assess deliverables against the Task's objectives and validation criteria before determining the outcome. If version control is active and the Task was successful but changes remain uncommitted on the Task branch, commit on behalf following the conventions from Rules - no follow-up needed. If everything looks good, skip to step 3. If something needs attention, continue to step 2.
 2. Investigate and determine outcome per §2.2 Review Outcome Standards:
    - If no issues are found, continue to step 3.
-   - If the Worker needs a follow-up, create a follow-up Task Prompt per `{GUIDE_PATH:task-assignment}` §3.4 Follow-Up Task Prompt Construction and continue to step 3.
+   - If the Worker needs a follow-up, create a follow-up Task Prompt per `{GUIDE_PATH:task-assignment}` §3.4 Follow-Up Task Prompt Construction and skip to step 4 (Tracker reflects Active until the follow-up resolves; regression does not apply when Worker outcome is not Success).
    - If planning documents need modification, proceed to §3.4 Planning Document Modification (returns to step 3 after completion).
-3. Update the Tracker per §4.1 Task Tracking Format: mark completed Tasks as Done, reassess Waiting Tasks for readiness, update branches. Execute pending merges per §2.5 Merge Standards before reassessing readiness. Assess whether the review yielded note-worthy context and add to working notes - both ephemeral coordination items and durable observations for later distillation. Remove stale working notes. Batch all changes from this review-dispatch cycle into a single Tracker edit.
-4. Assess next action per §2.4 Parallel Coordination Standards:
+3. If the Spec declares an `## E2E Test Corpus` with `per-task` cadence and the just-completed Task had a passing E2E with persisted tests per §2.10 Regression Run Standards, run the corpus regression now per `{SKILL_PATH:apm-e2e-validation}` §7. Capture `regression_result` and record it in Working Notes with the triggering Task ID. If `status: pass` or `empty`, continue to step 4. If `status: fail`, triage per `{SKILL_PATH:apm-e2e-validation}` §7.4 and dispatch the appropriate follow-up Task Prompt - do not mark the Task as Done in step 4; instead the Tracker reflects Active until the follow-up resolves. If `status: blocked`, communicate to the User per §2.10 with setup guidance, allow the Task to be marked Done in step 4 with a blocked-regression Working Note, and continue.
+4. Update the Tracker per §4.1 Task Tracking Format: mark completed Tasks as Done (or keep Active when a follow-up is pending from step 2 or step 3), reassess Waiting Tasks for readiness, update branches. Execute pending merges per §2.5 Merge Standards before reassessing readiness. Assess whether the review yielded note-worthy context and add to working notes - both ephemeral coordination items and durable observations for later distillation. Remove stale working notes. Batch all changes from this review-dispatch cycle into a single Tracker edit.
+5. Assess next action per §2.4 Parallel Coordination Standards:
    - If all Stage Tasks are Done and merged, collapse Stage per §4.1 Task Tracking Format and proceed to §3.5 Stage Summary Creation.
    - If Tasks are Ready, proceed to `{GUIDE_PATH:task-assignment}` §3.1 Dispatch Assessment in the same turn.
    - If no Tasks are Ready but Workers are active, communicate wait state per §2.4 Parallel Coordination Standards and direct User to return the next report.

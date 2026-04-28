@@ -26,6 +26,8 @@ When a criterion requires User involvement - judgment the Worker cannot self-ass
 
 When criteria require resources not currently available, request them from the User rather than substituting a lower verification level.
 
+**Missing MCP handling:** When a validation step (including E2E) requires an MCP that is not available on the current platform, pause and report the missing MCP explicitly rather than substituting a lower validation level. Include the MCP name in the Task Log's Issues section and return with Partial status so the Manager can re-present setup guidance to the User per `{SKILL_PATH:apm-mcp-setup}` §4 Runtime Missing-MCP Handling. Do not attempt to install the MCP - installation is the Manager's coordination domain.
+
 ### 2.3 Iteration Standards
 
 When validation fails, you enter a correction loop - investigate, correct, re-validate.
@@ -39,6 +41,10 @@ When validation fails, you enter a correction loop - investigate, correct, re-va
 ### 2.4 Rules Updates
 
 When the User provides a correction or directive during execution, comply immediately and continue. Do not pause to discuss Rules at this point. At Task completion, note the correction in the Task Log under Important Findings with `important_findings: true` - the Manager will see it during Task Review regardless of what happens next. After logging, reporting, and directing the User to deliver the report, ask at the end of your turn whether the correction should become a Rule for all Workers - frame it naturally based on what was said and why it might apply beyond this Task. Make it clear the User can ignore this and proceed with delivering the report - it is not a gate. If the User approves, update `{RULES_FILE}` and update the Task Log to note that the correction was entered as a Rule. If the User declines, defers, or ignores, no further action - the Manager already has visibility through the important findings flag.
+
+When the correction changes observable behavior and the project's E2E Testing Policy is not `never`, re-validate before finalizing - re-run the scenarios per `{SKILL_PATH:apm-e2e-validation}` §5 Execution to verify the corrected behavior. Under `ask-per-task` policy, ask the User whether to re-validate before re-running. Note the re-validation in the Task Log alongside the correction.
+
+**Post-Done User corrections.** After a Task is Done and its Report has been delivered to the Manager, the User may remain in the Worker chat and request further changes. For scope-internal small tweaks (values, strings, colors, timings) that do not alter the Task's overall deliverable shape, apply the change autonomously: perform the code change, append a `## Post-Done Correction` section to the existing Task Log describing what changed and why, re-validate per §3.4 Task Validation including re-running E2E when applicable and the project's E2E Policy is not `never`, write an updated Task Report to the Report Bus noting the Post-Done Correction, and direct the User to deliver it to the Manager for awareness. For scope-external changes (new behavior, additional deliverables, changes affecting other Tasks or agents), do not proceed - direct the User to the Manager's chat with a note that a new Task needs creation through Plan modification. When the boundary is unclear, prefer routing through the Manager.
 
 ### 2.5 Version Control Standards
 
@@ -87,8 +93,9 @@ Perform the following actions:
 
 Perform the following actions:
 1. Execute autonomous checks from the Task Prompt's validation criteria per §2.2 Validation Standards: run tests, verify builds, confirm outputs exist and match expected structure. If any fail, continue to the correction loop. Ambiguous results: treat as failure and iterate; if iteration doesn't resolve, pause for guidance.
-2. If criteria require User involvement: pause and present work per §2.2 Validation Standards. Communicate what was accomplished, what needs the User's review or action, where deliverables are located, and what to report back. If approved or completed, proceed to §3.6 Task Completion with Success status. If feedback provided, continue to the correction loop with feedback integrated.
-3. If all criteria passed, proceed to §3.6 Task Completion with Success status.
+2. If the Task Prompt contains an E2E Validation section, assemble an E2E Test Brief per `{SKILL_PATH:apm-e2e-validation}` §4 E2E Test Brief Format - enrich the Manager-rendered scenarios with target environment (URL or app identifier, simulator name), launch commands and ready signal, preferred runner and fallback order, available MCPs, iteration budget, and the artifact path (already specified in the section). Create the artifact path directory, then execute the scenarios inline per `{SKILL_PATH:apm-e2e-validation}` §5 Execution and capture the resulting `e2e_result`. If `status: pass` and the E2E Validation section contains a `### Persistence` sub-block, write the passing scenarios as runner-native test code into the corpus path per `{SKILL_PATH:apm-e2e-validation}` §6 Test Code Persistence (semantic filenames, `# APM source: Task <N.M>` header, final stable selectors and timings) before continuing. If `status: fail`, enter the correction loop using `failure_summary` as investigation input. If `status: blocked` (missing MCP, unreachable environment, or no available runner), report Partial status per §2.2 Validation Standards Missing MCP handling without proceeding.
+3. If criteria require User involvement: pause and present work per §2.2 Validation Standards. Communicate what was accomplished, what needs the User's review or action, where deliverables are located, and what to report back. If approved or completed, proceed to §3.6 Task Completion with Success status. If feedback provided, continue to the correction loop with feedback integrated.
+4. If all criteria passed (including E2E when applicable), proceed to §3.6 Task Completion with Success status.
 
 ### 3.5 Correction Loop
 
@@ -97,6 +104,7 @@ Perform the following actions:
 2. Apply a single targeted fix based on your investigation, re-execute affected portions, and return to Task Validation.
 3. If the correction does not resolve the issue, spawn a debug subagent per §2.3 Iteration Standards: provide the error output, what you investigated and attempted, relevant file paths, and expected vs actual behavior. Direct it to trace the root cause and propose a fix.
 4. When the subagent returns, validate its findings - confirm the root cause and verify the fix. If sound, apply and return to Task Validation. If unresolved, present the situation to the User: what failed, what was investigated and attempted, current state, and options for proceeding. Upon User guidance, integrate the new direction or apply outcome status per `{GUIDE_PATH:task-logging}` §2.2 Outcome Standards and continue to Task Completion.
+5. When the failure originated from an E2E `fail` verdict, the correction targets application-side behavior - test-side adjustments (selectors, timing, retries) already happened inline within the per-scenario iteration budget per `{SKILL_PATH:apm-e2e-validation}` §5.2 Scenario Execution. After applying the application fix and returning to Task Validation, re-run all scenarios from the start to verify the corrected behavior. Application-side iterations are bounded by this correction loop's standard budget - exceeding it ends the Task with Partial status.
 
 ### 3.6 Task Completion
 

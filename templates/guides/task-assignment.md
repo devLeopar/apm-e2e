@@ -41,6 +41,8 @@ Task Prompts must be self-contained. Workers have the same tools as any agent bu
 
 **Exclude** content relating to other domains, providing background without actionable requirements, or already captured in the Task's Guidance field.
 
+**E2E Validation section.** When the project's E2E Testing Policy is not `never` and the Task has observable user-facing behavior, include an E2E Validation section in the Task Prompt body. Render the Task's product-level acceptance criteria from Plan Validation into test-executable scenarios per `{SKILL_PATH:apm-e2e-validation}` §3 Three-Level Scenario Rendering - observable user actions, pass conditions, cross-scenario acceptance, and the artifact path following `.apm/e2e-artifacts/stage-<NN>/task-<NN>-<MM>/`. When the Spec also declares an `## E2E Test Corpus`, include a `### Persistence` block within the E2E Validation section with the corpus path, runner format, naming pattern, and header comment template per `{SKILL_PATH:apm-e2e-validation}` §6 - this is where the Worker will write passing scenarios as runner-native code that becomes part of the regression suite. Under `ask-per-task` policy, pause and ask the User before dispatch per §3.3 Task Prompt Construction. Exclude the section for Tasks with no user-facing behavior (pure refactors, internal utilities, docs) even when policy is `auto`.
+
 ### 2.3 Follow-Up Standards
 
 Follow-up Task Prompts occur when the review outcome determines retry after investigation. You arrive with: original Task Log findings, investigation results, understanding of what went wrong, and potentially modified planning documents.
@@ -122,7 +124,7 @@ Assemble the Task Prompt and deliver via the Message Bus.
 
 Perform the following actions:
 1. Construct YAML frontmatter per §4.1 Task Prompt Format.
-2. Construct prompt body: Task Reference, Context from Dependencies (if applicable), Objective, Detailed Instructions, Workspace, Expected Output, Validation Criteria, Instruction Accuracy, Task Iteration, Task Logging instructions, Reporting Instructions.
+2. Construct prompt body: Task Reference, Context from Dependencies (if applicable), Objective, Detailed Instructions, Workspace, Expected Output, Validation Criteria, Instruction Accuracy, Task Iteration, E2E Validation (when applicable per §2.2 Task Prompt Content Standards - under `ask-per-task` policy, pause before including and ask the User with a recommendation based on Task nature), Task Logging instructions, Reporting Instructions.
 3. Create a feature branch off the repository's base branch per §2.5 Version Control Standards. For parallel dispatch, create a worktree: `git worktree add .apm/worktrees/<branch-slug> -b <branch-name>`. Include the branch name (sequential) or worktree path (parallel) in the Workspace section.
 4. Record the branch name in the Task row's Branch column when updating the Tracker.
 5. Clear the incoming Report Bus per §2.6 Delivery Standards.
@@ -185,6 +187,7 @@ has_dependencies: true
 - *Validation Criteria:* From Plan Validation field.
 - *Instruction Accuracy:* The objective and expected output are authoritative - deliver those. However, the detailed instructions and steps were constructed from planning documents and may contain inaccurate details, missed prerequisites, or outdated assumptions about the codebase. When a specific instruction contradicts what the codebase actually shows, validate the actual state rather than persisting with the instruction as written.
 - *Task Iteration:* When validation fails, investigate before fixing - read error output, trace the cause, understand what went wrong. Apply one targeted change per iteration. When a fix does not resolve the issue, spawn a debug subagent with structured instructions: the error output, what you investigated and attempted, relevant file paths, and expected vs actual behavior. Direct it to trace the root cause and propose a fix. Validate the subagent's findings before applying. When the root cause could stem from multiple independent areas, spawn separate subagents in parallel. If unresolved after subagent investigation, report with Partial status.
+- *E2E Validation:* (Optional - included when the project's E2E Testing Policy is not `never` and the Task has observable user-facing behavior per §2.2 Task Prompt Content Standards.) Product-level acceptance criteria from the Task's Plan Validation field rendered into test-executable scenarios with observable user actions, pass conditions, cross-scenario acceptance, and the artifact path. When the Spec declares `## E2E Test Corpus`, include a `### Persistence` sub-block with the corpus path, runner format, naming pattern, and header comment template. Format per `{SKILL_PATH:apm-e2e-validation}` §3 Three-Level Scenario Rendering. Keep scenarios tool-agnostic - Worker resolves runner selection at execution time from the Brief.
 - *Task Logging:* Path and reference to `{GUIDE_PATH:task-logging}` §3.1 Task Log Procedure.
 - *Task Report:* Instruction to output a Task Report for User to return to Manager.
 

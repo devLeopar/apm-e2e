@@ -152,6 +152,22 @@ These concepts are not formal capitalized terms but are clearly defined because 
 
 **Cross-agent overrides.** When a Worker Handoff is detected, same-agent dependencies from Tasks whose logs were not loaded by the incoming Worker are reclassified as cross-agent. The Manager maintains an override list in the Tracker, recording the specific Tasks affected. During Task Assignment, the Manager checks this list to determine dependency context depth. The Dependency Graph is not modified; overrides are a runtime layer over the static plan.
 
+**E2E Testing Policy.** A project-level declaration of how end-to-end validation operates, captured by the Planner in the Spec's E2E Testing Policy section. Three values are defined:
+
+- *auto:* E2E runs by default on Tasks with observable user-facing behavior.
+- *ask-per-task:* The Manager asks the User before each dispatch, presenting a recommendation based on Task nature.
+- *never:* E2E validation is not part of the workflow.
+
+Policy is inherited by every Task unless the Task's Validation criteria explicitly disable it. Absent declaration is equivalent to `never`.
+
+**E2E Test Brief.** The structured execution checklist a Worker assembles from the Task Prompt's E2E Validation section before running the scenarios. Contains target environment (URL or app identifier, launch commands), test scenarios (observable user actions and pass conditions), acceptance criteria, artifact path, tool hints (available MCPs, preferred runner), and iteration budget. The Brief is rendered at three levels: Planner writes product-level acceptance criteria in the Plan Validation field, Manager renders test-executable scenarios into the Task Prompt's E2E Validation section, and Worker enriches with runtime environment before executing inline. The Brief lives in the Worker's working context only - it is not written to a separate file.
+
+**E2E Test Corpus.** Persistent collection of executable test code stored in the project tree at the path declared in the Spec's E2E Test Corpus section. After a Worker's E2E scenarios pass, the Worker writes them to the corpus as runner-native code (Maestro flow YAML, Playwright spec, etc.) with a `# APM source: Task N.M` header for traceability. The corpus accumulates across Tasks and is run by the Manager as the regression suite per the Spec's cadence declaration. Default paths by runtime: `.maestro/` for Expo, `e2e/playwright/` for web, `e2e/api/` for backend - or the project's existing test infrastructure when one is detected. Corpus files live outside `.apm/` and are tracked by the project's normal version control.
+
+**Regression Run.** Manager-side execution of the full E2E Test Corpus to verify a just-completed Task did not break previously-persisted scenarios. Triggered per the Spec's cadence: `per-task` (default - after each E2E-passing Task during Task Review), `per-stage` (at Stage Verification), or `manual-only`. The Manager runs tests in the coordination context, captures a structured `regression_result` (pass/fail per file, producer Task identification from the file header, failure summaries), and triages failures into one of four branches: consumer broke producer (follow-up to current Worker), producer test is stale (follow-up to producer Worker or Manager fixes inline), consumer adapts (follow-up to current Worker with adaptation guidance), or ambiguous (User decides). Empty corpus makes the run a no-op.
+
+**MCP Dependencies.** External service integrations the project requires, captured by the Planner in the Spec's MCP Dependencies section. Each entry lists the MCP name, purpose (which Stages or Tasks need it), installation command, and authentication requirements. The Manager coordinates setup with the User during First Initiation; Workers use MCPs that are already installed and report missing MCPs via Partial status for re-guidance.
+
 ---
 
 **End of Terminology**

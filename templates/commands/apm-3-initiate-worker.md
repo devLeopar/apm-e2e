@@ -21,6 +21,7 @@ Read the following documents (these reads are independent):
 - `{GUIDE_PATH:task-execution}` - Task Execution Procedure
 - `{GUIDE_PATH:task-logging}` - Task Logging Procedure
 - `{SKILL_PATH:apm-communication}` - Message Bus protocol
+- `{SKILL_PATH:apm-e2e-validation}` - E2E Test Brief format and inline execution (consulted when a Task Prompt contains an E2E Validation section)
 - `{RULES_FILE}` - Rules
 
 ### 2.1 Registration

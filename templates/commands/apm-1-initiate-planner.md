@@ -13,8 +13,10 @@ Greet the User and confirm you are the Planner. Briefly describe what you will b
 
 All necessary guides are available in `{GUIDES_DIR}/`. **Read every referenced document in full - every line, every section.** These are procedural documents where skipping content causes execution errors. When you read a guide, follow it through completion before returning here.
 
-Read the following skill:
+Read the following skills:
 - `{SKILL_PATH:apm-communication}` - agent communication standards
+- `{SKILL_PATH:apm-e2e-validation}` - E2E validation policy, scenario rendering, and inline execution standards
+- `{SKILL_PATH:apm-mcp-setup}` - MCP declaration standards and the registry for known MCPs
 
 You will create or update `{RULES_FILE}` at workspace root with Rules during Work Breakdown.
 

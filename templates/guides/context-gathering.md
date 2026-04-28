@@ -152,7 +152,14 @@ Combine related questions naturally in conversation. Track what has been answere
 - What has already been decided about technical direction, tools, or approaches - and what remains open?
 - Are there things that are definitely in or out of scope?
 
-**Round completion:** Present a round completion summary per §2.4 Round Advancement. You must have sufficient understanding of design decisions and constraints, work structure and dependencies, technical requirements, complexity and risk factors, and validation criteria for core requirements.
+*E2E Testing and External Services (ask when the project has user-facing behavior or external integrations):*
+- What is the primary target runtime - web, mobile (Expo or bare React Native), native mobile, backend API, or hybrid?
+- Which user-facing flows are critical enough to validate end-to-end as user-observable behavior?
+- What E2E policy fits the project - `auto` (validate every user-facing Task by default), `ask-per-task` (decide per Task with a recommendation), or `never` (skip E2E validation entirely)? Present the trade-off: `auto` gives stronger guarantees at higher token cost; `ask-per-task` lets the User weigh cost per Task; `never` is appropriate for internal libraries or throwaway prototypes.
+- When E2E policy is not `never`: should passing scenarios persist as runner-native test code (Maestro YAML, Playwright spec) into the project tree to form a regression suite? If yes, does the project already have a test directory (`tests/e2e/`, `.maestro/`, `cypress/e2e/`) the corpus should live in, or should the default for the runtime be used? What regression cadence fits - `per-task` (Manager runs full corpus after each E2E-passing Task, strongest safety net), `per-stage` (corpus runs once per Stage, lighter), or `manual-only` (no automatic runs)? Present trade-off: `per-task` catches regressions immediately but adds Manager-side execution time per Task; `per-stage` accumulates regression risk within the Stage; `manual-only` shifts the regression decision to the User.
+- Which external services or tools does the project need at runtime (database, auth, deployment, payments, storage)? For each, is there an MCP available, and does it need authentication the User would complete via a dashboard? Record the intent here - detailed MCP installation flows are resolved from the registry during Work Breakdown.
+
+**Round completion:** Present a round completion summary per §2.4 Round Advancement. You must have sufficient understanding of design decisions and constraints, work structure and dependencies, technical requirements, complexity and risk factors, validation criteria for core requirements, and - when applicable - E2E policy preference alongside external service integrations.
 
 ### 3.5 Question Round 3: Implementation Approach and Quality
 
@@ -218,6 +225,7 @@ The understanding summary is presented per §3.6 Finalize Understanding for User
 - *Process and quality:* workflow preferences, coordination requirements, approval gates, validation approach
 - *Execution conventions:* broadly applicable patterns or coding standards the User has specified; note whether an existing `{RULES_FILE}` was found.
 - *Observed preferences:* version control patterns, coordination preferences, or other factual observations that surfaced during exploration or User responses.
+- *E2E and integrations:* target runtime, E2E Testing Policy preference (when applicable), test corpus path and regression cadence preferences (when policy is not `never`), and external services requiring MCPs with their authentication requirements. Omit entirely when the project has no user-facing behavior or external integrations.
 
 The understanding summary captures what was gathered - not how it will be decomposed. Decomposition happens in the next procedure. Use diagrams for relationships, tables for structured comparisons, prose for narrative context. Do not force entries for categories where nothing emerged. The summary should be something the User can review and say "yes, you understand my project" or point out what's wrong.
 
