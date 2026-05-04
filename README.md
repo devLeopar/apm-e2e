@@ -1,149 +1,94 @@
-# Agentic Project Management (APM)
+# APM E2E
 
-[![License: MPL-2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0) [![npm](https://img.shields.io/npm/v/agentic-pm)](https://www.npmjs.com/package/agentic-pm) [![GitHub Release](https://img.shields.io/github/v/release/sdi2200262/agentic-project-management)](https://github.com/sdi2200262/agentic-project-management/releases)
+[![License: MPL-2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0)
 
-*Manage complex projects with a team of AI agents, smoothly and efficiently.*
+*A custom APM adaptation that runs E2E scenarios inline and turns the passing ones into a Manager-orchestrated regression suite.*
 
-> **Custom adaptation — `devLeopar/apm-e2e`.** This fork extends upstream [agentic-project-management](https://github.com/sdi2200262/agentic-project-management) with two additions for projects that need behavioral verification:
->
-> 1. **Inline Worker E2E execution.** Workers run E2E scenarios (Playwright, Maestro, Detox, etc.) directly in their own context — no separate validator subagent, no dispatch toggle. The same agent that writes the feature also runs the behavioral checks against it.
-> 2. **E2E Test Corpus + Manager regression suite.** Passing scenarios are persisted as runner-native test code into the project tree (e.g. `.maestro/`, `e2e/playwright/`) with a `# APM source: Task N.M` traceability header. After each E2E-passing Task, the Manager runs the full corpus during Task Review (before marking Done) and triages regression failures into four branches: *consumer broke producer's feature*, *producer's test is stale*, *consumer adapts to existing contract*, or *ambiguous — User decides*. Cadence is configurable in the Spec (`per-task`, `per-stage`, or `manual-only`).
->
-> The Planner asks about E2E policy, corpus location, and regression cadence during Round 2 of Context Gathering; the Spec records them; the Manager orchestrates persistence and regression at runtime.
->
-> **Install:**
-> ```bash
-> apm custom -r devLeopar/apm-e2e --tag v1.0.1-e2e-2
-> ```
-> Both layers are opt-in — projects that don't need E2E (internal libraries, throwaway prototypes) declare `## E2E Testing Policy: never` and the entire layer is inert.
+## What is APM E2E?
 
-## What is APM?
+APM E2E is a custom adaptation of [Agentic Project Management (APM)](https://github.com/sdi2200262/agentic-project-management) for projects that ship with end-to-end behavioral coverage — web (Playwright, Cypress), mobile (Maestro, Detox), or API (Playwright, supertest). It layers two changes on top of upstream APM v1 and otherwise leaves the framework unchanged:
 
-APM is an open-source framework for managing ambitious software projects with AI assistants. Instead of working in a single, increasingly chaotic chat, APM structures your work into a coordinated system where different AI agents handle planning, coordination, and execution as a team.
+1. **Inline Worker E2E execution.** Workers run E2E scenarios in their own context against the feature they just built — no separate validator subagent, no dispatch toggle. The agent that writes the feature is the one that runs the behavioral checks against it.
+2. **E2E Test Corpus + Manager regression.** Passing scenarios are persisted as runner-native test code (Maestro YAML, Playwright spec, etc.) into the project tree with a `# APM source: Task N.M` traceability header. After each E2E-passing Task, the Manager runs the full corpus during Task Review — before marking the Task Done — and triages any failure into one of four branches.
 
-As conversations grow, AI context degrades. The assistant loses track of requirements, produces bad code, and hallucinates details. For substantial projects, this makes sustained progress nearly impossible.
+It is for projects where "Done" should mean "the behavior still works alongside everything that worked before." Internal libraries, throwaway prototypes, and codebases without a runtime to exercise can opt out by declaring `## E2E Testing Policy: never` in the Spec, in which case the entire layer is inert and APM E2E behaves identically to APM v1.
 
-To address this, APM coordinates three specialized agent types, each operating in its own context with only the information it needs:
+## Installation
 
-- **Planner** - Conducts structured project discovery and decomposes requirements into three planning documents: a Spec (what to build), a Plan (how work is organized), and Rules (how work is performed).
-- **Manager** - Coordinates execution by assigning Tasks to Workers, reviewing completed work, and maintaining project state. Operates on execution summaries rather than raw code.
-- **Workers** - Execute specific Tasks with tightly scoped context. Each Worker receives self-contained Task Prompts with everything it needs, executes, validates, and reports back.
-
-Project state lives in structured files outside any agent's context. When a conversation ends or an agent reaches its limits, a Handoff transfers working knowledge to a fresh instance as needed. This also allows completed APM sessions to be archived and their context carried forward to new ones.
-
-You mediate every exchange between agents, keeping the workflow platform-agnostic and every interaction visible. Each agent guides you through the workflow at every step, telling you exactly which command to run, in which conversation, and what to do next.
-
-<p align="center">
-  <img src="assets/apm-social-card.png" alt="Agentic Project Management" width="800"/>
-</p>
-
-## Quick Start
-
-APM supports Claude Code, Codex CLI, Cursor, GitHub Copilot, Gemini CLI, and OpenCode.
-
-Install the CLI:
+Navigate to your project directory, initialize through the `agentic-pm` CLI:
 
 ```bash
 npm install -g agentic-pm
+apm custom -r devLeopar/apm-e2e --tag v1.0.1-e2e-2
 ```
 
-Navigate to your project directory and initialize:
-
-```bash
-apm init
-```
-
-Select your AI assistant when prompted. The CLI installs commands, guides, skills, and project artifact templates into your workspace.
-
-Next, open your AI assistant and run:
+Open your AI assistant and start planning:
 
 ```
 /apm-1-initiate-planner
 ```
 
-You can also provide context about what you want to build:
-```
-/apm-1-initiate-planner I want you to build Claude Opus 5. Make no mistakes.
+The Planner collaborates with you through project discovery and creates the planning documents. During Round 2 of Context Gathering it asks about E2E policy, corpus location, and regression cadence; the Spec records the answers; the Manager orchestrates persistence and regression at runtime. Once approved, open a new chat and run `/apm-2-initiate-manager` to begin the Implementation Phase.
+
+## How It Works
+
+APM E2E inherits APM v1 unchanged — same three agents, same two phases, same artifacts, same commands. The E2E layer adds:
+
+- **Planner — three new questions in Round 2.** Whether to run E2E (`always` / `task-tagged` / `never`), where the corpus lives (e.g. `.maestro/`, `e2e/playwright/`), and how often the Manager runs regression (`per-task` / `per-stage` / `manual-only`).
+- **Worker — inline scenario execution and test persistence.** When a Task carries an `## E2E Validation` block, the Worker assembles a Brief (target, scenarios, acceptance, tool hints, iteration budget), runs the scenarios with the runner declared in the Spec, iterates on application-side fixes when scenarios fail, and — when a `### Persistence` sub-block is present — writes the passing scenarios out as runner-native test files into the corpus path with a `# APM source: Task N.M` header.
+- **Manager — regression run during Task Review.** After accepting an E2E-passing Task and before marking it Done in the Tracker, the Manager runs the full corpus per the Spec's cadence. Failures are triaged into four branches: *consumer broke producer's feature* (open follow-up to fix the consumer), *producer's test is stale* (open follow-up to update the test), *consumer adapts to existing contract* (rework the current Task), or *ambiguous* (escalate to the User).
+
+The four-branch triage uses Manager arbitration thresholds analogous to upstream Planning Document Modification authority: low-confidence ambiguity always escalates rather than guessing.
+
+The Spec records the policy in three knobs the Planner writes during planning:
+
+```markdown
+## E2E Testing Policy: always | task-tagged | never
+
+## E2E Test Corpus
+- Path: .maestro/
+- Runners: maestro, playwright
+- Cadence: per-task | per-stage | manual-only
 ```
 
-The Planner collaborates with you through project discovery and creates the planning documents for you to review. Once approved, it guides you to open a new conversation and run `/apm-2-initiate-manager` to begin coordinated execution. From there, each agent directs you through the workflow step by step.
+`per-task` (default) runs the corpus after every E2E-passing Task. `per-stage` defers regression to Stage Verification, trading early detection for fewer runs. `manual-only` runs only when the User explicitly asks — useful for prototyping phases where the corpus is changing too fast to be a useful gate.
 
-For the full walkthrough, see the [Getting Started](https://agentic-project-management.dev/docs/getting-started) guide.
+## Trade-offs
+
+APM E2E trades Worker context space and Manager review time for behavioral certainty:
+
+- Worker context fills faster — test runner output (Playwright traces, Maestro device logs, stack traces from failed assertions) lands directly in the conversation. Workers iterate against full output instead of a subagent's compressed summary. This is the deliberate cost of dropping the validator subagent.
+- Task Review takes longer — the Manager runs the full corpus before marking each Task Done. Cost grows linearly with corpus size; the cadence policy exists to bound it.
+- The project tree gains a tests directory that needs to be maintained — stale tests against deleted features need to be removed by hand or by follow-up Tasks.
+
+If your project does not have a runtime to exercise (an internal library, a documentation site, a research notebook), declare `## E2E Testing Policy: never` and APM E2E behaves identically to APM v1 — no Brief, no persistence, no regression run.
+
+## Commands
+
+APM E2E keeps the v1 command surface unchanged. The E2E layer is opt-in via the Spec, not new commands.
+
+| # | Command | Agent | Purpose |
+|---|---------|-------|---------|
+| 1 | `/apm-1-initiate-planner` | Planner | Planning Phase |
+| 2 | `/apm-2-initiate-manager` | Manager | Implementation Phase |
+| 3 | `/apm-3-initiate-worker` | Worker | Worker initialization |
+| 4 | `/apm-4-check-tasks` | Worker | Task Bus check |
+| 5 | `/apm-5-check-reports` | Manager | Report Bus check |
+| 6 | `/apm-6-handoff-manager` | Manager | Manager Handoff |
+| 7 | `/apm-7-handoff-worker` | Worker | Worker Handoff |
+| 8 | `/apm-8-summarize-session` | Standalone | Session summary and archival |
+| 9 | `/apm-9-recover` | Manager or Worker | Reconstruct context after compaction |
 
 ## Documentation
 
-Full documentation is available at [agentic-project-management.dev](https://agentic-project-management.dev):
-
-- **[Introduction](https://agentic-project-management.dev/docs/introduction)** - What APM is and how it works
-- **[Getting Started](https://agentic-project-management.dev/docs/getting-started)** - Installation through first task cycle
-- **[Agent Types](https://agentic-project-management.dev/docs/agent-types)** - Planner, Manager, and Worker roles
-- **[Agent Orchestration](https://agentic-project-management.dev/docs/agent-orchestration)** - Communication, coordination, Memory, and Handoff mechanics
-- **[Workflow Overview](https://agentic-project-management.dev/docs/workflow-overview)** - Every procedure in detail
-
-The site also covers advanced topics like how APM's prompt and context engineering works under the hood, design principles behind the multi-agent coordination, tips and tricks for model selection and cost optimization, troubleshooting, and customization.
-
-## CLI
-
-| Command | Description |
-|---------|-------------|
-| `apm init` | Initialize with official releases |
-| `apm custom` | Install from custom repositories |
-| `apm update` | Update to latest compatible version |
-| `apm archive` | Archive current session or manage archives |
-| `apm add` / `apm remove` | Add or remove assistant(s) |
-| `apm status` | Show installation state |
-
-See the [CLI Guide](https://agentic-project-management.dev/docs/cli) for full details.
-
-## Customization
-
-APM supports custom repositories for teams that want to modify the workflow. Fork the repo (for upstream sync) or use "Use this template" (for a clean start), adjust templates, build, release, and install with `apm custom -r owner/repo`. A [customization skill](skills/apm-customization/) is included to guide AI agents through the process.
-
-See the [Customization Guide](https://agentic-project-management.dev/docs/customization-guide) for details.
-
-### APM Auto
-
-[APM Auto](https://github.com/sdi2200262/apm-auto) is an official custom adaptation of APM built for Claude Code. It replaces the user-mediated Worker model with autonomous subagent dispatch - the Manager spawns ephemeral subagents via `Agent()` to execute Tasks, reviews their output, and continues without requiring you to shuttle messages between chats. Best for prototyping, fast execution, and simpler projects.
-
-```bash
-apm custom -r sdi2200262/apm-auto
-```
-
-## APM Assist
-
-The [`apm-assist`](skills/apm-assist/) skill turns your AI assistant into an APM-aware helper. Install it into any project and your assistant can explain how APM works, answer questions by reading the live documentation, detect your installation state and version, and guide migration from v0.5.x. It works with any supported platform.
-
-```bash
-# Claude Code example
-mkdir -p .claude/skills/apm-assist
-curl -sL https://raw.githubusercontent.com/sdi2200262/agentic-project-management/main/skills/apm-assist/SKILL.md \
-  -o .claude/skills/apm-assist/SKILL.md
-```
-
-See the [standalone skills directory](skills/) for other platforms.
-
-## Migrating from v0.5.x
-
-v1.0.0 is a ground-up redesign - the workflow, file structure, CLI, and agent roles all changed significantly. The pre-v1 codebase is preserved on the [`v0.5.x`](https://github.com/sdi2200262/agentic-project-management/tree/v0.5.x) branch for reference.
-
-The [Troubleshooting Guide](https://agentic-project-management.dev/docs/troubleshooting-guide#migrating-from-v05x) documents the recommended migration procedure. The `apm-assist` skill above can also walk you through it interactively.
+For the full APM workflow documentation, see [agentic-project-management.dev](https://agentic-project-management.dev). APM E2E shares APM's core concepts (planning documents, Stages, Tasks, Memory, Handoff) with the inline-execution and regression layers added on top.
 
 ## Contributing
 
-Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. Report bugs or suggest features via [GitHub Issues](https://github.com/sdi2200262/agentic-project-management/issues). Reach out on Discord: `cobuter_man`.
-
-## Versioning
-
-CLI and template releases version independently but share major version for compatibility. See [VERSIONING.md](VERSIONING.md) for details.
+Contributions are welcome. Report bugs or suggest features via [GitHub Issues](https://github.com/devLeopar/apm-e2e/issues).
 
 ## License
 
-Licensed under the **Mozilla Public License 2.0 (MPL-2.0)**. APM is free for all uses including commercial. Improvements to core APM files must be shared back with the community. See [LICENSE](LICENSE) for full details.
+Licensed under the **Mozilla Public License 2.0 (MPL-2.0)**. See [LICENSE](LICENSE) for full details.
 
-Versions prior to v0.4.0 were released under the MIT license. The license was updated to MPL-2.0 starting with v0.4.0.
-
-<p align="center">
-  <a href="https://github.com/sdi2200262" target="_blank">
-    <img src="assets/cobuter-man.png" alt="CobuterMan" width="150"/>
-  </a>
-</p>
+Based on [Agentic Project Management](https://github.com/sdi2200262/agentic-project-management) by [CobuterMan](https://github.com/sdi2200262).
